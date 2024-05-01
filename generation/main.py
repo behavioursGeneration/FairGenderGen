@@ -64,22 +64,5 @@ if __name__ == "__main__":
         generate = Generate(args.dataset, args.epoch, None)
     elif(task == "generate_one_file"):
         generate = Generate(args.dataset, args.epoch, args.file)
-    elif(task == "evaluate"):   
-        Evaluate(args.dataset, args.epoch, args.dtw, args.pca, args.curve, args.curveVideo, args.motion)
-    elif(task == "gen_eval"):
-        if args.all_step :
-            for i in range(0, 100, 10):
-                new_epoch = str(int(args.epoch) + i)
-                generate = Generate(args.dataset, new_epoch)
-                Evaluate(args.dataset, new_epoch, args.dtw, args.pca, args.curve, args.curveVideo, args.motion, generate.dm)
-        else:
-            generate = Generate(args.dataset, args.epoch)
-            Evaluate(args.dataset, args.epoch, args.dtw, args.pca, args.curve, args.curveVideo, args.motion, generate.dm)
-    elif(task == "visualize_latent"):
-        visualize = VisualizeData(args.dataset, args.epoch)
-    elif(task == "classify"):
-        classif = Classify(args.label)
-    elif(task == "gen_classify"):
-        classif = Classify(args.label, args.epoch)
 
     
