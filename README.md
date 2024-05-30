@@ -6,8 +6,8 @@ The code contains two models
 * the first one to jointly and automatically generate the rhythmic head, facial, and gaze movements (non-verbal behaviors) of a virtual agent from acoustic speech features. The architecture is an Adversarial Encoder-Decoder. Head movements and gaze orientation are generated as 3D coordinates, while facial expressions are generated using action units based on the facial action coding system.
 * The second, building upon the first, integrates a gender discriminator and a gradient reversal layer. It aims to mitigate these biases and create non-verbal behaviours independent of the speaker’s gender
 
-- To see generation examples with natural voices, go [here]([https://www.youtube.com/playlist?list=PLRyxHB7gYN-BPB6RvTt2xPE9nwLuMq2yD](https://www.youtube.com/playlist?list=PLRyxHB7gYN-D8v_mMn4RZvJfH00h7bRT1).
-- The github repository of the gender classifier is available [here](https://github.com/behavioursGeneration/gender-classifier?tab=readme-ov-file).
+To see generation examples with natural voices, go [here]([https://www.youtube.com/playlist?list=PLRyxHB7gYN-BPB6RvTt2xPE9nwLuMq2yD](https://www.youtube.com/playlist?list=PLRyxHB7gYN-D8v_mMn4RZvJfH00h7bRT1).
+The github repository of the gender classifier is available [here](https://github.com/behavioursGeneration/gender-classifier?tab=readme-ov-file).
   
 ## The architecture 
 ![Capture](https://github.com/behavioursGeneration/FairGenderGen/assets/110098017/da6d223d-f38e-44b9-9529-32eaacfdfbcf)
