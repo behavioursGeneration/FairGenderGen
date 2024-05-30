@@ -120,27 +120,3 @@ def get_no_silence_index_from_one_hot(one_hot_labels_list, type):
     raw_labels_list = [one_hot_to_label(label, type) for label in one_hot_labels_list]
     index_no_silence = [index for index, element in enumerate(raw_labels_list) if element != "silence"]
     return index_no_silence
-
-############ HOW TO USE
-
-# # Exemple de jeu de données
-# test_dialogAtc = ["silence", "Declaration", "Backchannel", "Agree/accept" , "Disagree/disaccept", "Question", "Directive" , "Non-understanding", 
-#               "Opening", "Apology", "Thanking"]
-
-# # Convertir les labels en one-hot
-# one_hot_labels = [label_to_one_hot(label, label_to_index_dialog_act) for label in test_dialogAtc]
-
-# # Convertir les données en tenseurs PyTorch
-# label_tensor = torch.stack(one_hot_labels)
-
-# # Utiliser les données et les labels encodés
-# print("Exemples de données avec les labels one-hot correspondants (tenseurs PyTorch) :")
-# for i in range(len(label_tensor)):
-#     example_label = label_tensor[i]
-#     print("Label one-hot:", example_label)
-
-# # Utiliser les représentations one-hot pour récupérer les labels
-# print("\nRécupération des labels à partir des représentations one-hot :")
-# for one_hot_label in label_tensor:
-#     recovered_label = one_hot_to_label(one_hot_label, index_to_label_dialog_act)
-#     print("Label récupéré à partir de l'encodage one-hot :", recovered_label)
