@@ -67,23 +67,8 @@ def reshape_output(target_eye, target_pose_r, target_au, output_scaler):
     outs = rescale(outs, output_scaler)
     return outs
 
-def concat_with_labels(x_audio_noise, len_of_x, gender, dialog_act, valence, arousal, certainty, dominance):
+def concat_with_labels(x_audio_noise, len_of_x, gender):
     if(constants.gender):
         gender = torch.repeat_interleave(gender.unsqueeze(2), len_of_x, dim=2)
         x_audio_noise = torch.cat([x_audio_noise, gender], dim=1)
-    if(constants.dialog_act):
-        dialog_act = torch.repeat_interleave(dialog_act.unsqueeze(2), len_of_x, dim=2)
-        x_audio_noise = torch.cat([x_audio_noise, dialog_act], dim=1)
-    if(constants.valence):
-        valence = torch.repeat_interleave(valence.unsqueeze(2), len_of_x, dim=2)
-        x_audio_noise = torch.cat([x_audio_noise, valence], dim=1)
-    if(constants.arousal):
-        arousal = torch.repeat_interleave(arousal.unsqueeze(2), len_of_x, dim=2)
-        x_audio_noise = torch.cat([x_audio_noise, arousal], dim=1)
-    if(constants.certainty):
-        certainty = torch.repeat_interleave(certainty.unsqueeze(2), len_of_x, dim=2)
-        x_audio_noise = torch.cat([x_audio_noise, certainty], dim=1)
-    if(constants.dominance):
-        dominance = torch.repeat_interleave(dominance.unsqueeze(2), len_of_x, dim=2)
-        x_audio_noise = torch.cat([x_audio_noise, dominance], dim=1)
     return x_audio_noise

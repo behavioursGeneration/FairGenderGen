@@ -13,23 +13,11 @@ from torch.utils.data import DataLoader, Dataset
 
 
 class CustomDataset(Dataset):
-    def __init__(self, X_audio, Y, speak_or_not, gender=None, labels=None, interval=None, details_time=None, final_Y=None, predict=False, keys=None):
+    def __init__(self, X_audio, Y, speak_or_not, gender=None, interval=None, details_time=None, final_Y=None, predict=False, keys=None):
         self.X_audio = X_audio
         self.Y = Y
         self.speak_or_not = speak_or_not
         self.gender = gender
-        if(labels!=None):
-            self.dialog_act = labels["dialog_act"]
-            self.valence = labels["valence"]
-            self.arousal = labels["arousal"]
-            self.certainty = labels["certainty"]
-            self.dominance = labels["dominance"]
-        else:
-            self.dialog_act = None
-            self.valence = None
-            self.arousal = None
-            self.certainty = None
-            self.dominance = None
         self.interval = interval
         self.details_time = details_time
         self.final_Y = final_Y
@@ -41,8 +29,8 @@ class CustomDataset(Dataset):
 
     def __getitem__(self, i):
         if(self.predict):
-            return self.X_audio[i], self.details_time[i], self.keys[i], self.gender[i], self.dialog_act[i], self.valence[i], self.arousal[i], self.certainty[i], self.dominance[i]
-        return self.X_audio[i], self.Y[i], self.gender[i], self.dialog_act[i], self.valence[i], self.arousal[i], self.certainty[i], self.dominance[i]
+            return self.X_audio[i], self.details_time[i], self.keys[i], self.gender[i]
+        return self.X_audio[i], self.Y[i], self.gender[i]
     
     def get_final_test_videos(self):
         return self.keys, self.final_Y
@@ -77,7 +65,7 @@ class CustomDataModule(pl.LightningDataModule):
         details = pd.read_excel(details_file)
         list_of_keys = details[["nom", "set"]].where(details["set"] == set_type).dropna()["nom"].values
 
-        X_audio, Y_behaviour, details_time, speak_or_not, gender, final_Y, keys, raw_keys, dialog_act, valence, arousal, certainty, dominance = ([] for _ in range(13))
+        X_audio, Y_behaviour, details_time, speak_or_not, gender, final_Y, keys, raw_keys = ([] for _ in range(8))
 
         for key in list_of_keys:
             key_file = join(final_path, key + ".p")
@@ -97,11 +85,6 @@ class CustomDataModule(pl.LightningDataModule):
                 final_Y.append(data["final_behaviour"])
                 keys.extend([ele for ele in [data["key"]] for _ in range(len(data["behaviour_array"]))])
                 raw_keys.append(data["key"])
-                dialog_act.extend([get_maj_label(ele) for ele in data["dialog_act"]])
-                valence.extend([get_maj_label(ele) for ele in data["valence"]])
-                arousal.extend([get_maj_label(ele) for ele in data["arousal"]])
-                certainty.extend([get_maj_label(ele) for ele in data["certainty"]])
-                dominance.extend([get_maj_label(ele) for ele in data["dominance"]])
                 # Free up memory occupied by the 'data' variable
                 del data
 
@@ -112,21 +95,14 @@ class CustomDataModule(pl.LightningDataModule):
         print(X_audio.shape)
         X_audio_final = torch.cat((speak_or_not, X_audio), dim=2)
 
-        one_hot_tensor_dialog_act = torch.stack([label_to_one_hot(label, "dialog_act") for label in dialog_act])
-        one_hot_tensor_valence = torch.stack([label_to_one_hot(label, "valence") for label in valence])
-        one_hot_tensor_arousal = torch.stack([label_to_one_hot(label, "arousal") for label in arousal])
-        one_hot_tensor_certainty = torch.stack([label_to_one_hot(label, "certainty") for label in certainty])
-        one_hot_tensor_dominance = torch.stack([label_to_one_hot(label, "dominance") for label in dominance])
-        gender = [gender[i] if value != "silence" else value for i, value in enumerate(valence)]
-        one_hot_tensor_gender = torch.stack([label_to_one_hot(label, "gender") for label in gender])
-        one_hot_tensor_list = {"dialog_act": one_hot_tensor_dialog_act, "valence": one_hot_tensor_valence, "arousal": one_hot_tensor_arousal, "certainty": one_hot_tensor_certainty, "dominance": one_hot_tensor_dominance}
-        
+        gender = [gender[i] if value != "silence" else value for i, value in enumerate(keys)]
+        one_hot_tensor_gender = torch.stack([label_to_one_hot(label, "gender") for label in gender])        
         Y_behaviour = torch.as_tensor(np.array(Y_behaviour))
         
         constants.seq_len = Y_behaviour.shape[1]
         constants.audio_dim = X_audio_final.shape[2]
 
-        return X_audio_final, Y_behaviour, speak_or_not, one_hot_tensor_gender, details_time, final_Y, keys, raw_keys, one_hot_tensor_list
+        return X_audio_final, Y_behaviour, speak_or_not, one_hot_tensor_gender, details_time, final_Y, keys, raw_keys
 
     def load_file_data(self, filename):
         X_audio = []
@@ -135,11 +111,6 @@ class CustomDataModule(pl.LightningDataModule):
         gender = []
         keys = []
         raw_keys = []
-        dialog_act = []
-        valence = []
-        arousal = []
-        certainty = []
-        dominance = []
 
         path_to_single_file = constants.data_path + "/audio_file/final_data/4/"
 
@@ -156,11 +127,6 @@ class CustomDataModule(pl.LightningDataModule):
             gender.extend([ele for ele in [data["gender"]] for _ in range(len(data["details_time"]))])
             keys.extend([ele for ele in [data["key"]] for _ in range(len(data["details_time"]))])
             raw_keys.append(data["key"])
-            dialog_act.extend([get_maj_label(ele) for ele in data["dialog_act"]])
-            valence.extend([get_maj_label(ele) for ele in data["valence"]])
-            arousal.extend([get_maj_label(ele) for ele in data["arousal"]])
-            certainty.extend([get_maj_label(ele) for ele in data["certainty"]])
-            dominance.extend([get_maj_label(ele) for ele in data["dominance"]])
 
         speak_or_not = torch.as_tensor(list(map(list, speak_or_not))).unsqueeze(-1)
         speak_or_not = torch.repeat_interleave(speak_or_not, 2, dim=1)
@@ -168,18 +134,12 @@ class CustomDataModule(pl.LightningDataModule):
         X_audio = torch.stack(X_audio)
         X_audio_final = torch.cat((speak_or_not, X_audio), dim=2)
 
-        one_hot_tensor_dialog_act = torch.stack([label_to_one_hot(label, "dialog_act") for label in dialog_act])
-        one_hot_tensor_valence = torch.stack([label_to_one_hot(label, "valence") for label in valence])
-        one_hot_tensor_arousal = torch.stack([label_to_one_hot(label, "arousal") for label in arousal])
-        one_hot_tensor_certainty = torch.stack([label_to_one_hot(label, "certainty") for label in certainty])
-        one_hot_tensor_dominance = torch.stack([label_to_one_hot(label, "dominance") for label in dominance])
-        gender = [gender[i] if value != "silence" else value for i, value in enumerate(valence)]
+        gender = [gender[i] if value != "silence" else value for i, value in enumerate(keys)]
         one_hot_tensor_gender = torch.stack([label_to_one_hot(label, "gender") for label in gender])
-        one_hot_tensor_list = {"dialog_act": one_hot_tensor_dialog_act, "valence": one_hot_tensor_valence, "arousal": one_hot_tensor_arousal, "certainty": one_hot_tensor_certainty, "dominance": one_hot_tensor_dominance}
         constants.audio_dim = X_audio_final.shape[2]
         constants.seq_len = len(details_time[0])
         print(constants.audio_dim, constants.seq_len)
-        return X_audio_final, speak_or_not, one_hot_tensor_gender, details_time, keys, raw_keys, one_hot_tensor_list
+        return X_audio_final, speak_or_not, one_hot_tensor_gender, details_time, keys, raw_keys
 
 
     def prepare_data(self):
@@ -189,12 +149,12 @@ class CustomDataModule(pl.LightningDataModule):
             datasets = constants.datasets
             datasets_properties = constants.datasets_properties
             if not self.predict:
-                self.X_train_audio, self.Y_train, self.speak_or_not_train, self.gender_train, self.details_time_train, _, _, _, self.one_hot_tensor_list_train = self.load_data(datasets, datasets_properties, "train", path)
+                self.X_train_audio, self.Y_train, self.speak_or_not_train, self.gender_train, self.details_time_train, _, _, _ = self.load_data(datasets, datasets_properties, "train", path)
             
             if not self.one_file:
-                self.X_test_audio, self.Y_test, self.speak_or_not_test, self.gender_test, self.details_time_test, self.final_Y, self.keys_test, self.raw_keys, self.one_hot_tensor_list_test = self.load_data(datasets, datasets_properties, "test", path)
+                self.X_test_audio, self.Y_test, self.speak_or_not_test, self.gender_test, self.details_time_test, self.final_Y, self.keys_test, self.raw_keys = self.load_data(datasets, datasets_properties, "test", path)
             else:
-                self.X_test_audio, self.speak_or_not_test, self.gender_test, self.details_time_test, self.keys_test, self.raw_keys, self.one_hot_tensor_list_test = self.load_file_data(self.file)
+                self.X_test_audio, self.speak_or_not_test, self.gender_test, self.details_time_test, self.keys_test, self.raw_keys = self.load_file_data(self.file)
 
 
 
@@ -205,24 +165,24 @@ class CustomDataModule(pl.LightningDataModule):
             os.makedirs(dir_scaler, exist_ok=True)
             if stage == 'fit':
                 self.Y_scaled_train, self.y_scaler = scale_from_scratch(self.Y_train, "tanh")
-                self.train_dataset = CustomDataset(X_audio=self.X_train_audio, Y=self.Y_scaled_train, speak_or_not=self.speak_or_not_train, gender=self.gender_train, labels=self.one_hot_tensor_list_train)
+                self.train_dataset = CustomDataset(X_audio=self.X_train_audio, Y=self.Y_scaled_train, speak_or_not=self.speak_or_not_train, gender=self.gender_train)
 
                 self.Y_scaled_test = scale(self.Y_test, self.y_scaler)
-                self.test_dataset = CustomDataset(X_audio=self.X_test_audio, Y=self.Y_scaled_test, speak_or_not=self.speak_or_not_test, gender=self.gender_test, labels=self.one_hot_tensor_list_test)
+                self.test_dataset = CustomDataset(X_audio=self.X_test_audio, Y=self.Y_scaled_test, speak_or_not=self.speak_or_not_test, gender=self.gender_test)
 
                 pickle.dump(self.y_scaler, open(join(dir_scaler, 'scaler_y.pkl'), 'wb'))
 
                 if(self.fake_examples):
-                    self.create_fake_examples(self.X_train_audio, self.Y_scaled_train, self.speak_or_not_train, self.gender_train, self.one_hot_tensor_list_train)
+                    self.create_fake_examples(self.X_train_audio, self.Y_scaled_train, self.speak_or_not_train, self.gender_train)
 
             elif stage == "predict":
                 self.y_scaler = pickle.load(open(join(dir_scaler, 'scaler_y.pkl'), 'rb'))
                 self.Y_scaled_test = scale(self.Y_test, self.y_scaler)
-                self.test_dataset = CustomDataset(X_audio=self.X_test_audio, Y=None, speak_or_not=self.speak_or_not_test, gender=self.gender_test, labels=self.one_hot_tensor_list_test, details_time=self.details_time_test, keys=self.keys_test, predict=True)
+                self.test_dataset = CustomDataset(X_audio=self.X_test_audio, Y=None, speak_or_not=self.speak_or_not_test, gender=self.gender_test, details_time=self.details_time_test, keys=self.keys_test, predict=True)
 
             elif stage == "predict_one_file":
                 self.y_scaler = pickle.load(open(join(dir_scaler, 'scaler_y.pkl'), 'rb'))
-                self.test_dataset = CustomDataset(X_audio=self.X_test_audio, Y=None, speak_or_not=self.speak_or_not_test, gender=self.gender_test, labels=self.one_hot_tensor_list_test, details_time=self.details_time_test, keys=self.keys_test, predict=True)
+                self.test_dataset = CustomDataset(X_audio=self.X_test_audio, Y=None, speak_or_not=self.speak_or_not_test, gender=self.gender_test, details_time=self.details_time_test, keys=self.keys_test, predict=True)
             
             elif stage == "evaluate":
                 self.test_dataset = CustomDataset(X_audio=None, Y=None, speak_or_not=None, gender=None, labels=None, details_time=None, keys=self.raw_keys, final_Y=self.final_Y, predict=False)
@@ -231,14 +191,14 @@ class CustomDataModule(pl.LightningDataModule):
 
 
 
-    def create_fake_examples(self, X_audio, Y, speak_or_not, gender, one_hot_tensor_list_train):
+    def create_fake_examples(self, X_audio, Y, speak_or_not, gender):
         print("Lauching of create_fake_examples")
         speak_x_audio = []
         speak_y = []
-        speak_labels = {"gender" : [], "dialog_act" : [], "valence" : [], "arousal" : [], "certainty" : [], "dominance" : []}
+        speak_labels = {"gender" : []}
         no_speak_x_audio = []
         no_speak_y = []
-        no_speak_labels = {"gender" : [], "dialog_act" : [], "valence" : [], "arousal" : [], "certainty" : [], "dominance" : []}
+        no_speak_labels = {"gender" : []}
         
         for index, speak_boolean_value in enumerate(speak_or_not):
             speak_boolean_value = speak_boolean_value.to(dtype=torch.float32)
@@ -246,28 +206,13 @@ class CustomDataModule(pl.LightningDataModule):
                 speak_x_audio.append(X_audio[index])
                 speak_y.append(Y[index])
                 speak_labels["gender"].append(gender[index])
-                speak_labels["dialog_act"].append(one_hot_tensor_list_train["dialog_act"][index])
-                speak_labels["valence"].append(one_hot_tensor_list_train["valence"][index])
-                speak_labels["arousal"].append(one_hot_tensor_list_train["arousal"][index])
-                speak_labels["certainty"].append(one_hot_tensor_list_train["certainty"][index])
-                speak_labels["dominance"].append(one_hot_tensor_list_train["dominance"][index])
             elif(torch.mean(speak_boolean_value) > 0.8):
                 no_speak_x_audio.append(X_audio[index])
                 no_speak_y.append(Y[index])
                 no_speak_labels["gender"].append(gender[index])
-                no_speak_labels["dialog_act"].append(one_hot_tensor_list_train["dialog_act"][index])
-                no_speak_labels["valence"].append(one_hot_tensor_list_train["valence"][index])
-                no_speak_labels["arousal"].append(one_hot_tensor_list_train["arousal"][index])
-                no_speak_labels["certainty"].append(one_hot_tensor_list_train["certainty"][index])
-                no_speak_labels["dominance"].append(one_hot_tensor_list_train["dominance"][index])
-        self.speak_examples = (torch.stack(speak_x_audio, 0).squeeze(), torch.stack(speak_y, 0).squeeze(), torch.stack(speak_labels["gender"],0).squeeze(), 
-                               torch.stack(speak_labels["dialog_act"],0).squeeze(), torch.stack(speak_labels["valence"],0).squeeze(), 
-                               torch.stack(speak_labels["arousal"],0).squeeze(), torch.stack(speak_labels["certainty"],0).squeeze(), 
-                               torch.stack(speak_labels["dominance"],0).squeeze())
-        self.no_speak_examples = (torch.stack(no_speak_x_audio, 0).squeeze(), torch.stack(no_speak_y, 0).squeeze(), torch.stack(no_speak_labels["gender"],0).squeeze(), 
-                               torch.stack(no_speak_labels["dialog_act"],0).squeeze(), torch.stack(no_speak_labels["valence"],0).squeeze(), 
-                               torch.stack(no_speak_labels["arousal"],0).squeeze(), torch.stack(no_speak_labels["certainty"],0).squeeze(), 
-                               torch.stack(no_speak_labels["dominance"],0).squeeze())
+
+        self.speak_examples = (torch.stack(speak_x_audio, 0).squeeze(), torch.stack(speak_y, 0).squeeze(), torch.stack(speak_labels["gender"],0).squeeze())
+        self.no_speak_examples = (torch.stack(no_speak_x_audio, 0).squeeze(), torch.stack(no_speak_y, 0).squeeze(), torch.stack(no_speak_labels["gender"],0).squeeze())
 
 
     def train_dataloader(self):

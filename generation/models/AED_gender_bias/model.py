@@ -91,7 +91,7 @@ class Generator(pl.LightningModule):
         self.up5_au = Up(128, 64, constants.kernel_size, bilinear)
         self.outc_au = OutConv(64, constants.au_size, constants.kernel_size)
 
-    def forward(self, x_audio, gender, dialog_act, valence, arousal, certainty, dominance):
+    def forward(self, x_audio, gender):
         in_audio = torch.swapaxes(x_audio, 1, 2)
 
         x = self.in1_audio(in_audio)
@@ -104,7 +104,7 @@ class Generator(pl.LightningModule):
         noise = self.noise_g.getNoise(x3, variance=0.1, interval=[-1,1])
         x_audio_noise = torch.add(x3, noise)
 
-        x_audio_noise = concat_with_labels(x_audio_noise, x_audio_noise.shape[2], gender, dialog_act, valence, arousal, certainty, dominance)
+        x_audio_noise = concat_with_labels(x_audio_noise, x_audio_noise.shape[2], gender)
 
         #Encoder (audio + noise part)
         x4 = self.down4(x_audio_noise)
@@ -162,7 +162,7 @@ class Discriminator(pl.LightningModule):
         self.fc2 = torch.nn.Linear(64, 1)
     
 
-    def forward(self, x_pose, c_audio, gender, dialog_act, valence, arousal, certainty, dominance):
+    def forward(self, x_pose, c_audio, gender):
         in_audio = torch.swapaxes(c_audio, 1, 2)
         c = self.conv1_audio(in_audio)
         c = F.max_pool1d(c, kernel_size=2, stride=2)
@@ -173,7 +173,7 @@ class Discriminator(pl.LightningModule):
 
         ###concat with labels here
         x_audio_labels = c
-        x_audio_labels = concat_with_labels(x_audio_labels, x_audio_labels.shape[2], gender, dialog_act, valence, arousal, certainty, dominance)
+        x_audio_labels = concat_with_labels(x_audio_labels, x_audio_labels.shape[2], gender)
 
         x = torch.swapaxes(x_pose, 1, 2)
         x = self.conv1_behaviour(x)
@@ -197,15 +197,15 @@ class GAN_with_gender(pl.LightningModule):
         self.criterion = nn.MSELoss()
 
         if(no_speak_examples!=None):
-            self.no_speak_x_audio, self.no_speak_y, self.no_speak_gender, self.no_speak_dialog_act, self.no_speak_valence, self.no_speak_arousal, self.no_speak_certainty, self.no_speak_dominance = no_speak_examples
-            self.speak_x_audio, self.speak_y, self.speak_gender, self.speak_dialog_act, self.speak_valence, self.speak_arousal, self.speak_certainty, self.speak_dominance = speak_examples
+            self.no_speak_x_audio, self.no_speak_y, self.no_speak_gender = no_speak_examples
+            self.speak_x_audio, self.speak_y, self.speak_gender = speak_examples
 
         self.automatic_optimization = False
         self.generator = Generator()
         self.discriminator = Discriminator()
 
-    def forward(self, x_audio, gender, dialog_act, valence, arousal, certainty, dominance):
-        return self.generator(x_audio, gender, dialog_act, valence, arousal, certainty, dominance)
+    def forward(self, x_audio, gender):
+        return self.generator(x_audio, gender)
     
 class GAN(pl.LightningModule):
     def __init__(self, no_speak_examples=None, speak_examples=None):
@@ -222,8 +222,8 @@ class GAN(pl.LightningModule):
         self.create_loss()
 
         if(no_speak_examples!=None):
-            self.no_speak_x_audio, self.no_speak_y, self.no_speak_gender, self.no_speak_dialog_act, self.no_speak_valence, self.no_speak_arousal, self.no_speak_certainty, self.no_speak_dominance = no_speak_examples
-            self.speak_x_audio, self.speak_y, self.speak_gender, self.speak_dialog_act, self.speak_valence, self.speak_arousal, self.speak_certainty, self.speak_dominance = speak_examples
+            self.no_speak_x_audio, self.no_speak_y, self.no_speak_gender = no_speak_examples
+            self.speak_x_audio, self.speak_y, self.speak_gender = speak_examples
 
         self.automatic_optimization = False
 
@@ -232,8 +232,8 @@ class GAN(pl.LightningModule):
         self.discriminator = self.gan.discriminator
         self.gender_classifier = GenderClassifier()
 
-    def forward(self, x_audio, gender, dialog_act, valence, arousal, certainty, dominance):
-        return self.generator(x_audio, gender, dialog_act, valence, arousal, certainty, dominance)
+    def forward(self, x_audio, gender):
+        return self.generator(x_audio, gender)
 
     def configure_optimizers(self):
         b1 = 0.9
@@ -250,15 +250,15 @@ class GAN(pl.LightningModule):
         print(p, self.lambd)
 
     
-    def generator_step(self, inputs_audio, targets, gender, dialog_act, valence, arousal, certainty, dominance):
+    def generator_step(self, inputs_audio, targets, gender):
             inputs_audio, targets, target_eye, target_pose_r, target_au = format_data(inputs_audio, targets)
     
-            latent_representation, gen_eye, gen_pose_r, gen_au = self.generator(inputs_audio, gender, dialog_act, valence, arousal, certainty, dominance)
+            latent_representation, gen_eye, gen_pose_r, gen_au = self.generator(inputs_audio, gender)
             fake_targets = torch.cat((gen_eye, gen_pose_r, gen_au), 2)
             
             with torch.no_grad():
-                d_fake_pred = self.discriminator(fake_targets, inputs_audio, gender, dialog_act, valence, arousal, certainty, dominance).squeeze()
-                d_real_pred = self.discriminator(targets, inputs_audio, gender, dialog_act, valence, arousal, certainty, dominance).squeeze()
+                d_fake_pred = self.discriminator(fake_targets, inputs_audio, gender).squeeze()
+                d_real_pred = self.discriminator(targets, inputs_audio, gender).squeeze()
 
             g_iteration_loss = -1. * torch.mean(d_fake_pred)
             loss_eye = self.criterion(gen_eye, target_eye).mean()
@@ -272,25 +272,25 @@ class GAN(pl.LightningModule):
             return latent_representation, g_loss, loss_eye, loss_pose_r, loss_au, fake_targets, torch.mean(d_fake_pred), torch.mean(d_real_pred)
     
 
-    def discriminator_step(self, inputs_audio, targets, gender, dialog_act, valence, arousal, certainty, dominance):
+    def discriminator_step(self, inputs_audio, targets, gender):
             inputs_audio, targets, _, _, _ = format_data(inputs_audio, targets)
             with torch.no_grad():
-                _, output_eye, output_pose_r, output_au = self.generator(inputs_audio, gender, dialog_act, valence, arousal, certainty, dominance)
+                _, output_eye, output_pose_r, output_au = self.generator(inputs_audio, gender)
                 fake_targets = torch.cat((output_eye, output_pose_r, output_au), 2)
             
-            selected_audio_inputs, selected_gender, selected_dialog_act, selected_valence, selected_arousal, selected_certainty, selected_dominance, selected_real_targets, selected_fake_targets = self.create_fake_targets(inputs_audio, targets, fake_targets, gender, dialog_act, valence, arousal, certainty, dominance) 
+            selected_audio_inputs, selected_gender, selected_real_targets, selected_fake_targets = self.create_fake_targets(inputs_audio, targets, fake_targets, gender) 
 
             #fake predictions 
-            fake_pred = self.discriminator(selected_fake_targets, selected_audio_inputs, selected_gender, selected_dialog_act, selected_valence, selected_arousal, selected_certainty, selected_dominance).squeeze()
+            fake_pred = self.discriminator(selected_fake_targets, selected_audio_inputs, selected_gender).squeeze()
             #real predictions 
-            real_pred = self.discriminator(selected_real_targets, selected_audio_inputs, selected_gender, selected_dialog_act, selected_valence, selected_arousal, selected_certainty, selected_dominance).squeeze()
+            real_pred = self.discriminator(selected_real_targets, selected_audio_inputs, selected_gender).squeeze()
 
-            gp = self.compute_gradient_penalty(selected_real_targets, selected_fake_targets, selected_audio_inputs, selected_gender, selected_dialog_act, selected_valence, selected_arousal, selected_certainty, selected_dominance)
+            gp = self.compute_gradient_penalty(selected_real_targets, selected_fake_targets, selected_audio_inputs, selected_gender)
             d_loss = torch.mean(fake_pred) - torch.mean(real_pred) +  self.c_lambda * gp
             
             return d_loss, torch.mean(real_pred), torch.mean(fake_pred)
     
-    def create_fake_targets(self, inputs_audio, targets, fake_targets, gender, dialog_act, valence, arousal, certainty, dominance):
+    def create_fake_targets(self, inputs_audio, targets, fake_targets, gender):
             ### Discriminator predictions
             # one third generated by the generator, 
             # one third audio speaking + listening behavior, 
@@ -307,26 +307,21 @@ class GAN(pl.LightningModule):
             new_order = torch.randperm(selected_audio_inputs.size(0))
             selected_audio_inputs = selected_audio_inputs[new_order]
             selected_gender = torch.cat((self.no_speak_gender[idx_1].to(inputs_audio), self.speak_gender[idx_2].to(inputs_audio), gender[idx_3]),0)[new_order]
-            selected_dialog_act = torch.cat((self.no_speak_dialog_act[idx_1].to(inputs_audio), self.speak_dialog_act[idx_2].to(inputs_audio), dialog_act[idx_3]),0)[new_order]
-            selected_valence = torch.cat((self.no_speak_valence[idx_1].to(inputs_audio), self.speak_valence[idx_2].to(inputs_audio), valence[idx_3]),0)[new_order]
-            selected_arousal = torch.cat((self.no_speak_arousal[idx_1].to(inputs_audio), self.speak_arousal[idx_2].to(inputs_audio), arousal[idx_3]),0)[new_order]
-            selected_certainty = torch.cat((self.no_speak_certainty[idx_1].to(inputs_audio), self.speak_certainty[idx_2].to(inputs_audio), certainty[idx_3]),0)[new_order]
-            selected_dominance = torch.cat((self.no_speak_dominance[idx_1].to(inputs_audio), self.speak_dominance[idx_2].to(inputs_audio), dominance[idx_3]),0)[new_order]
 
             selected_real_targets = torch.cat((self.no_speak_y[idx_1].to(inputs_audio), self.speak_y[idx_2].to(inputs_audio), targets[idx_3]),0)[new_order]
             selected_fake_targets = torch.cat((self.speak_y[idx_1].to(inputs_audio), self.no_speak_y[idx_2].to(inputs_audio), fake_targets[idx_3]),0)[new_order]
 
-            return selected_audio_inputs, selected_gender, selected_dialog_act, selected_valence, selected_arousal, selected_certainty, selected_dominance, selected_real_targets, selected_fake_targets
+            return selected_audio_inputs, selected_gender, selected_real_targets, selected_fake_targets
     
 
-    def compute_gradient_penalty(self, real_samples, fake_samples, inputs_audio, gender, dialog_act, valence, arousal, certainty, dominance):
+    def compute_gradient_penalty(self, real_samples, fake_samples, inputs_audio, gender):
         """Calculates the gradient penalty loss for WGAN GP"""
         # Random weight term for interpolation between real and fake samples
         alpha = torch.rand(len(real_samples), 1, 1, requires_grad=True).to(real_samples)
         # Get random interpolation between real and fake samples
         interpolates = (alpha * real_samples + ((1 - alpha) * fake_samples)).requires_grad_(True)
         interpolates = interpolates.to(real_samples)
-        d_interpolates = self.discriminator(interpolates, inputs_audio, gender, dialog_act, valence, arousal, certainty, dominance)
+        d_interpolates = self.discriminator(interpolates, inputs_audio, gender)
 
         gradient = torch.autograd.grad(
             inputs=interpolates,
@@ -356,16 +351,16 @@ class GAN(pl.LightningModule):
 
 
     def training_step(self, batch, batch_idx):
-        inputs_audio, targets, gender, dialog_act, valence, arousal, certainty, dominance = batch
+        inputs_audio, targets, gender = batch
         g_opt, d_opt = self.optimizers()
 
         for _ in range(self.n_critic):
-            d_loss, real_pred, fake_pred = self.discriminator_step(inputs_audio, targets, gender, dialog_act, valence, arousal, certainty, dominance)
+            d_loss, real_pred, fake_pred = self.discriminator_step(inputs_audio, targets, gender)
             d_opt.zero_grad()
             self.manual_backward(d_loss)
             d_opt.step()
 
-        latent_representation, g_loss, loss_eye, loss_pose_r, loss_au, fake_targets, d_fake_pred, d_real_pred = self.generator_step(inputs_audio, targets, gender, dialog_act, valence, arousal, certainty, dominance)
+        latent_representation, g_loss, loss_eye, loss_pose_r, loss_au, fake_targets, d_fake_pred, d_real_pred = self.generator_step(inputs_audio, targets, gender)
         
         gender_loss, gender_accuracy = self.gender_classifier_step(latent_representation, gender, self.lambd)
 
@@ -452,9 +447,9 @@ class GAN(pl.LightningModule):
 
 
     def validation_step(self, batch, batch_idx):
-        inputs_audio, targets, gender, dialog_act, valence, arousal, certainty, dominance = batch
+        inputs_audio, targets, gender = batch
         with torch.no_grad():
-            latent_representation, val_g_loss, val_loss_eye, val_loss_pose_r, val_loss_au, fake_targets, val_d_fake_pred, val_d_real_pred = self.generator_step(inputs_audio, targets, gender, dialog_act, valence, arousal, certainty, dominance)
+            latent_representation, val_g_loss, val_loss_eye, val_loss_pose_r, val_loss_au, fake_targets, val_d_fake_pred, val_d_real_pred = self.generator_step(inputs_audio, targets, gender)
 
         with torch.no_grad():
             val_gender_loss, val_gender_accuracy = self.gender_classifier_step(latent_representation, gender, self.lambd)
@@ -473,12 +468,12 @@ class GAN(pl.LightningModule):
 
 
     def predict_step(self, batch, batch_idx):
-        inputs_audio, details_time, key, gender, dialog_act, valence, arousal, certainty, dominance = batch
+        inputs_audio, details_time, key, gender = batch
         with torch.no_grad():
-            latent_representation, output_eye, output_pose_r, output_au = self(inputs_audio.squeeze(1), gender, dialog_act, valence, arousal, certainty, dominance)
+            latent_representation, output_eye, output_pose_r, output_au = self(inputs_audio.squeeze(1), gender)
         pred = reshape_output(output_eye, output_pose_r, output_au, self.pose_scaler)
 
-        return key, pred, details_time, latent_representation, gender, dialog_act, valence, arousal, certainty, dominance
+        return key, pred, details_time, latent_representation, gender
 
 
 

@@ -104,35 +104,6 @@ def read_params(file, task, id=None):
     constants.au_size = config.getint('DATA','au_size') 
     constants.behaviour_size = constants.eye_size + constants.pose_r_size + constants.au_size
 
-    # --- Labels params
-    constants.gender = config.getboolean('LABELS','gender')
-    constants.dialog_act = config.getboolean('LABELS','dialog_act')
-    constants.valence = config.getboolean('LABELS','valence')
-    constants.arousal = config.getboolean('LABELS','arousal')
-    constants.certainty = config.getboolean('LABELS','certainty')
-    constants.dominance = config.getboolean('LABELS','dominance')
-    constants.number_of_dim_labels = 0
-    constants.with_labels = False
-    if(constants.gender):
-        constants.number_of_dim_labels += 2
-        constants.with_labels = True
-    if(constants.dialog_act):
-        constants.number_of_dim_labels += 11
-        constants.with_labels = True
-    if(constants.valence):
-        constants.number_of_dim_labels += 4
-        constants.with_labels = True
-    if(constants.arousal):
-        constants.number_of_dim_labels += 4
-        constants.with_labels = True
-    if(constants.certainty):
-        constants.number_of_dim_labels += 4
-        constants.with_labels = True
-    if(constants.dominance):
-        constants.number_of_dim_labels += 4
-        constants.with_labels = True
-    
-
     constants.openface_columns = get_config_columns('openface_columns')
 
 

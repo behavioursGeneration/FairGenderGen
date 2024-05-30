@@ -60,14 +60,9 @@ def removeOverlapAndAlignStep(origin_processed_file, processed_file, objective_s
     df_audio = df_audio_wt_overlap
     df_audio.to_csv(processed_file, index=False)
 
-def create_complete_ipu_file(anno_file, dialogAct, valence, arousal, certainty, dominance):
+def create_complete_ipu_file(anno_file):
     df = pd.read_csv(anno_file, names=["ipu", "begin", "end", "speak"])
     df["bool_speak"] = df["speak"].transform(lambda x : 0 if x == "#" else 1)
-    df["dialogAct"] = dialogAct
-    df["valence"] = valence
-    df["arousal"] = arousal
-    df["certainty"] = certainty
-    df["dominance"] = dominance
     df = df.drop(columns=['ipu'])
     return df
 
@@ -116,7 +111,7 @@ def create_set(file_name, output_file, wav_file, wav_processed_file, df_ipu, gen
                     "time_array": [], "details_time": [], 
                     "behaviour_array": [], "previous_behaviour": [], "seq_previous_behaviour": [], "final_behaviour": [],
                     "prosody_array":[], 
-                    "speak_or_not": [], "dialog_act": [], "valence": [], "arousal": [], "certainty": [], "dominance": []}
+                    "speak_or_not": []}
 
     df_ipu_align = change_timestep(df_ipu, timestep)
     df_ipu_align.timestamp = df_ipu_align.timestamp.astype(float)
@@ -152,13 +147,6 @@ def create_set(file_name, output_file, wav_file, wav_processed_file, df_ipu, gen
         #speak_or_not
         final_dict["speak_or_not"].append(second_cut["bool_speak"].values)
 
-        #tag
-        final_dict["dialog_act"].append(second_cut["dialogAct"].values)
-        final_dict["valence"].append(second_cut["valence"].values)
-        final_dict["arousal"].append(second_cut["arousal"].values)
-        final_dict["certainty"].append(second_cut["certainty"].values)
-        final_dict["dominance"].append(second_cut["dominance"].values)
-
         #speech features (opensmile)
         final_dict["prosody_array"].append(second_cut[prosody_features].values)
 
@@ -172,7 +160,6 @@ def create_set(file_name, output_file, wav_file, wav_processed_file, df_ipu, gen
         pickle.dump(final_dict, f)
     del final_dict
 
-# avant de lancer ce fichier il faut avoir un fichier audio (enregistrement d'une voix ou TTS (avec google par exemple) et extraire les IPU avec sppas)
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-file', help='file name', default='')
@@ -180,20 +167,8 @@ if __name__ == "__main__":
     parser.add_argument('-overlap', type=float, default=0)
 
     parser.add_argument('-gender', default="F")
-    parser.add_argument('-dialogAct', default="Declaration")
-    parser.add_argument('-valence', default="Neutral")
-    parser.add_argument('-arousal', default="Neutral")
-    parser.add_argument('-certainty', default="Neutral")
-    parser.add_argument('-dominance', default="Neutral")
     args = parser.parse_args()
 
-    #reminder of the different categories
-    # categories_certainty = ["silence", "Certain", "Neutral", "Uncertainty"]
-    # categories_valence = ["silence", "Positive", "Negative", "Neutral"]
-    # categories_arousal = ["silence", "Active", "Passive", "Neutral"]
-    # categories_dominance = ["silence", "Strong", "Weak", "Neutral"]
-    # categories_dialogAct = ["silence", "Declaration", "Backchannel", "Agree/accept" , "Disagree/disaccept", "Question", "Directive" , "Non-understanding", 
-    #             "Opening", "Apology", "Thanking"]
 
     file_name = args.file
     segment_length = args.segment #secondes
@@ -211,14 +186,11 @@ if __name__ == "__main__":
     wav_processed_file = join(path, processed_dir, file_name+".csv")
     wav_origin_processed_file = join(path, processed_dir, "origin", file_name+".csv")
     anno_file = join(path, anno_dir, file_name+".csv")
-    value_dialogACt = args.dialogAct.replace("/", "").replace("\\", "")
-    #param_file = "_"+value_dialogACt+"_"+args.valence+"_"+args.arousal+"_"+args.certainty+"_"+args.dominance
-    param_file=""
-    set_file = join(path, set_dir, str(segment_length), file_name+param_file+".p")
+    set_file = join(path, set_dir, str(segment_length), file_name+".p")
     print(set_file)
 
     createCsvFile(wav_file, wav_origin_processed_file)
     removeOverlapAndAlignStep(wav_origin_processed_file, wav_processed_file, timestep)
-    df_anno = create_complete_ipu_file(anno_file, args.dialogAct, args.valence, args.arousal, args.certainty, args.dominance)
+    df_anno = create_complete_ipu_file(anno_file)
     print(df_anno)
     create_set(file_name, set_file, wav_file, wav_processed_file, df_anno, args.gender, segment_length, overlap, timestep)

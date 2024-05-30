@@ -44,14 +44,6 @@ au_size = 0 # nombre de colonne openface AUs
 prosody_size = 0 #taille des channels hubert
 derivative = False
 
-# --- labels params
-gender = True
-dialog_act = True
-valence = True
-arousal = True
-certainty = True
-dominance = True
-
 opensmile_columns = []
 selected_opensmile_columns = []
 selected_os_index_columns = []

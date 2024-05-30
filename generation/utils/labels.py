@@ -4,31 +4,11 @@ import random
 
 
 # Tableau de labels
-categories_dialog_act = ["silence", "Declaration", "Backchannel", "Agree/accept" , "Disagree/disaccept", "Question", "Directive" , "Non-understanding", "Opening", "Apology", "Thanking"]
-categories_certainty = ["silence", "Certain", "Neutral", "Uncertainty"]
-categories_valence = ["silence", "Positive", "Negative", "Neutral"]
-categories_arousal = ["silence", "Active", "Passive", "Neutral"]
-categories_dominance = ["silence", "Strong", "Weak", "Neutral"]
 categories_gender = ["H", "F", "silence"]
 categories_small_gender = ["H", "F"]
 
 
 # Créer les dictionnaires de mapping
-label_to_index_dialog_act  = {label: i for i, label in enumerate(sorted(categories_dialog_act))}
-index_to_label_dialog_act  = {i: label for label, i in label_to_index_dialog_act.items()}
-
-label_to_index_valence  = {label: i for i, label in enumerate(sorted(categories_valence))}
-index_to_label_valence  = {i: label for label, i in label_to_index_valence.items()}
-
-label_to_index_arousal  = {label: i for i, label in enumerate(sorted(categories_arousal))}
-index_to_label_arousal  = {i: label for label, i in label_to_index_arousal.items()}
-
-label_to_index_dominance  = {label: i for i, label in enumerate(sorted(categories_dominance))}
-index_to_label_dominance  = {i: label for label, i in label_to_index_dominance.items()}
-
-label_to_index_certainty  = {label: i for i, label in enumerate(sorted(categories_certainty))}
-index_to_label_certainty  = {i: label for label, i in label_to_index_certainty.items()}
-
 label_to_index_gender  = {label: i for i, label in enumerate(sorted(categories_gender))}
 index_to_label_gender  = {i: label for label, i in label_to_index_gender.items()}
 
@@ -41,17 +21,7 @@ print(index_to_label_gender)
 
 # Fonction pour convertir les labels en représentation one-hot
 def label_to_one_hot(label, type):
-    if type == "dialog_act":
-        label_to_index = label_to_index_dialog_act
-    elif type == "valence":
-        label_to_index = label_to_index_valence
-    elif type == "arousal":
-        label_to_index = label_to_index_arousal
-    elif type == "dominance":
-        label_to_index = label_to_index_dominance
-    elif type == "certainty":
-        label_to_index = label_to_index_certainty
-    elif type == "gender":
+    if type == "gender":
         label_to_index = label_to_index_gender
     elif type == "small_gender":
         label_to_index = label_to_index_small_gender
@@ -62,17 +32,7 @@ def label_to_one_hot(label, type):
 
 # Fonction pour récupérer le label à partir de la représentation one-hot
 def one_hot_to_label(one_hot, type):
-    if type == "dialog_act":
-        index_to_label = index_to_label_dialog_act
-    elif type == "valence":
-        index_to_label = index_to_label_valence
-    elif type == "arousal":
-        index_to_label = index_to_label_arousal
-    elif type == "dominance":
-        index_to_label = index_to_label_dominance
-    elif type == "certainty":
-        index_to_label = index_to_label_certainty
-    elif type == "gender":
+    if type == "gender":
         index_to_label = index_to_label_gender
     elif type == "small_gender":
         index_to_label = index_to_label_small_gender
@@ -81,22 +41,7 @@ def one_hot_to_label(one_hot, type):
 
 def one_hot_to_index(one_hot, type):
     index = torch.argmax(one_hot)
-    if type == "dialog_act":
-        index_to_label = index_to_label_dialog_act
-        return label_to_index_dialog_act[index_to_label[index.item()]]
-    elif type == "valence":
-        index_to_label = index_to_label_valence
-        return label_to_index_valence[index_to_label[index.item()]]
-    elif type == "arousal":
-        index_to_label = index_to_label_arousal
-        return label_to_index_arousal[index_to_label[index.item()]]
-    elif type == "dominance":
-        index_to_label = index_to_label_dominance
-        return label_to_index_dominance[index_to_label[index.item()]]
-    elif type == "certainty":
-        index_to_label = index_to_label_certainty
-        return label_to_index_certainty[index_to_label[index.item()]]
-    elif type == "gender":
+    if type == "gender":
         index_to_label = index_to_label_gender
         return label_to_index_gender[index_to_label[index.item()]]
     elif type == "small_gender":
@@ -113,68 +58,28 @@ def other_label(categories, current_label_list, type):
     return torch.stack(new_list)
 
 def get_other_label(label_list, type):
-    if type == "dialog_act":
-        return other_label(categories_dialog_act, label_list, type)
-    elif type == "valence":
-        return other_label(categories_valence, label_list, type)
-    elif type == "arousal":
-        return other_label(categories_arousal, label_list, type)
-    elif type == "dominance":
-        return other_label(categories_dominance, label_list, type)
-    elif type == "certainty":
-        return other_label(categories_certainty, label_list, type)
-    elif type == "gender":
+    if type == "gender":
         return other_label(categories_gender, label_list, type)
     elif type == "small_gender":
         return other_label(categories_small_gender, label_list, type)
 
 
 def get_labels(type):
-    if type == "dialog_act":
-        labels = categories_dialog_act
-    elif type == "valence":
-        labels = categories_valence
-    elif type == "arousal":
-        labels = categories_arousal
-    elif type == "dominance":
-        labels = categories_dominance
-    elif type == "certainty":
-        labels = categories_certainty
-    elif type == "gender":
+    if type == "gender":
         labels = categories_gender
     elif type == "small_gender":
         labels = categories_small_gender
     return labels
 
 def get_color(type):
-    if type == "dialog_act":
-        color = {"silence": "grey", "Declaration": "blue", "Backchannel":"yellow", "Agree/accept":"green" , "Disagree/disaccept":"red", "Question":"purple", "Directive":"black" , "Non-understanding":"orange", "Opening":"pink", "Apology":"brown", "Thanking":"olive"}
-    elif type == "valence":
-        color = {"silence": "grey", "Positive": "green", "Negative":"red", "Neutral":"blue"}
-    elif type == "arousal":
-        color = {"silence": "grey", "Active": "green", "Passive":"red", "Neutral":"blue"}
-    elif type == "dominance":
-        color = {"silence": "grey", "Strong": "green", "Weak":"red", "Neutral":"blue"}
-    elif type == "certainty":
-        color = {"silence": "grey", "Certain": "green", "Neutral":"red", "Uncertainty":"blue"}
-    elif type == "gender":
+    if type == "gender":
         color = {"silence": "grey", "H": "red", "F" : "green"}
     elif type == "small_gender":
         color = {"H": "red", "F" : "green"}
     return color
 
 def get_labels_to_index(type):
-    if type == "dialog_act":
-        labels = label_to_index_dialog_act
-    elif type == "valence":
-        labels = label_to_index_valence
-    elif type == "arousal":
-        labels = label_to_index_arousal
-    elif type == "dominance":
-        labels = label_to_index_dominance
-    elif type == "certainty":
-        labels = label_to_index_certainty
-    elif type == "gender":
+    if type == "gender":
         labels = label_to_index_gender
     elif type == "small_gender":
         labels = label_to_index_small_gender

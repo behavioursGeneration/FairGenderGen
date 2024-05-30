@@ -72,10 +72,10 @@ def create_set(regenerate_flag, init_output_path, output_path, audio_path, visua
                         "time_array": [], "details_time": [], 
                         "behaviour_array": [], "previous_behaviour": [], "seq_previous_behaviour": [], "final_behaviour": [],
                         "prosody_array":[], 
-                        "speak_or_not": [], "dialog_act": [], "valence": [], "arousal": [], "certainty": [], "dominance": []}
+                        "speak_or_not": []}
         final_path  = join(output_path,  key + ".p")
         if(not isfile(final_path) or regenerate_flag):
-            df_ipu = pd.read_excel(final_dict["ipu_path"])[["begin", "end", "speak", "bool_speak", "dialogAct", "valence", "arousal", "certainty", "dominance"]]
+            df_ipu = pd.read_excel(final_dict["ipu_path"])[["begin", "end", "speak", "bool_speak"]]
             df_ipu_align_path = join(ipu_path, "align", file)
             if(not isfile(df_ipu_align_path)):
                 df_ipu_align = change_timestep(df_ipu, timestep)
@@ -138,13 +138,6 @@ def create_set(regenerate_flag, init_output_path, output_path, audio_path, visua
 
                 #speak_or_not
                 final_dict["speak_or_not"].append(second_cut["bool_speak"].values)
-
-                #tag
-                final_dict["dialog_act"].append(second_cut["dialogAct"].values)
-                final_dict["valence"].append(second_cut["valence"].values)
-                final_dict["arousal"].append(second_cut["arousal"].values)
-                final_dict["certainty"].append(second_cut["certainty"].values)
-                final_dict["dominance"].append(second_cut["dominance"].values)
 
                 #speech features (opensmile)
                 final_dict["prosody_array"].append(second_cut[prosody_features].values)
